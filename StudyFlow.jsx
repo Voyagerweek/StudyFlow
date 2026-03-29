@@ -1,34 +1,24 @@
 const { useState, useEffect, useRef } = React;
 
+// 🔴 PASTE YOUR API KEY HERE (Keep the quotation marks!) 🔴
+const GEMINI_API_KEY = AIzaSyAgzyZbmRywx7gzuE2ziWqNES-80gdcJ2w ; 
+
 // ── Demo seed data ─────────────────────────────────────────────────
 const INIT_USERS = [
   { id: "admin", name: "Admin", role: "admin", password: "admin123" },
-  { id: "s1", name: "Priya Sharma", role: "student", password: "pass123", scores: [] },
-  { id: "s2", name: "Rahul Verma", role: "student", password: "pass456", scores: [] },
+  { id: "s1", name: "Priya Sharma", role: "student", password: "pass123", scores: [] }
 ];
 
-// Start with a blank slate
-const INIT_SUBJECTS = [];
-
-// ── AI question generation ─────────────────────────────────────────
+// ── AI question generation (Powered by Gemini) ─────────────────────
 async function generateQuestions(material, count = 12) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-api-key": "YOUR_API_KEY_HERE", // 👈 Replace with your real key
-      "anthropic-version": "2023-06-01",
-      "anthropic-dangerously-allow-browser": "true" // 👈 Required for browser apps
-    },
-    body: JSON.stringify({
-      model: "claude-3-5-sonnet-20240620", // 👈 Fixed the fake model name
-      max_tokens: 2500,
-      messages: [{
-        role: "user",
-        content: `You are a teacher creating exam questions. Generate exactly ${count} questions from the material below.
+  if (GEMINI_API_KEY === "PASTE_YOUR_GEMINI_API_KEY_HERE") {
+    throw new Error("API Key Missing! Please add your key to the top of the code.");
+  }
+
+  const promptText = `You are a teacher creating exam questions. Generate exactly ${count} questions from the material below.
 
 STRICT RULES:
-1. Return ONLY raw JSON — no markdown, no explanation, no backticks
+1. Return ONLY raw JSON — no markdown formatting, no explanation, no backticks
 2. Mix types: mcq, truefalse, fillblank, shortanswer (roughly equal split)
 3. Mix difficulties: easy, medium, hard
 4. For fillblank: use a single blank ___ in the question; answer should be 1-3 words
@@ -43,14 +33,25 @@ JSON FORMAT (follow exactly):
 ]}
 
 MATERIAL TO USE:
-${material}`
-      }]
+${material}`;
+
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: promptText }] }],
+      generationConfig: { response_mime_type: "application/json" } // Forces clean JSON output
     })
   });
+
+  if (!res.ok) throw new Error("API Error: Check your key and internet connection.");
+  
   const data = await res.json();
-  if (!data.content || !data.content[0]) throw new Error("No response from API");
-  const text = data.content[0].text.replace(/```json|```/g, "").trim();
-  const parsed = JSON.parse(text);
+  const text = data.candidates[0].content.parts[0].text;
+  
+  // Clean up the response just in case
+  const cleanText = text.replace(/```json|```/g, "").trim();
+  const parsed = JSON.parse(cleanText);
   return parsed.questions.map((q, i) => ({ ...q, id: Date.now() + i }));
 }
 
@@ -319,7 +320,10 @@ function Admin({ subjects, setSubjects, users, setUsers, dark, onQuiz }) {
       const qs = await generateQuestions(matText, genCount);
       setSubjects(p => p.map(s => s.id === selSub.id ? { ...s, units: s.units.map(u => u.id === selUnit.id ? { ...u, topics: u.topics.map(t => t.id === selTopic.id ? { ...t, material: matText, questions: [...t.questions, ...qs] } : t) } : u) } : s));
       setGenMsg(`✓ ${qs.length} questions generated!`);
-    } catch (e) { setGenMsg("✗ Error — check your material & API."); }
+    } catch (e) { 
+        console.error(e);
+        setGenMsg("✗ Error — Check your API key at the top of the code."); 
+    }
     setGen(false); setTimeout(() => setGenMsg(""), 4000);
   };
 
@@ -949,13 +953,20 @@ function Results({ correct, total, pct, questions, answers, topic, subject, dark
   );
 }
 
-// ── Root App ───────────────────────────────────────────────────────
+// ── Root App (Now with Local Storage saving!) ──────────────────────
 function App() {
-  const [dark, setDark] = useState(true);
-  const [user, setUser] = useState(null);
-  const [users, setUsers] = useState(INIT_USERS);
-  const [subjects, setSubjects] = useState(INIT_SUBJECTS);
+  // Load data from Local Storage (or use defaults if empty)
+  const [dark, setDark] = useState(() => JSON.parse(localStorage.getItem("sf_dark")) ?? true);
+  const [users, setUsers] = useState(() => JSON.parse(localStorage.getItem("sf_users")) || INIT_USERS);
+  const [subjects, setSubjects] = useState(() => JSON.parse(localStorage.getItem("sf_subjects")) || []);
+  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("sf_currentUser")) || null);
   const [quiz, setQuiz] = useState(null);
+
+  // Save data to Local Storage whenever it changes
+  useEffect(() => { localStorage.setItem("sf_dark", JSON.stringify(dark)); }, [dark]);
+  useEffect(() => { localStorage.setItem("sf_users", JSON.stringify(users)); }, [users]);
+  useEffect(() => { localStorage.setItem("sf_subjects", JSON.stringify(subjects)); }, [subjects]);
+  useEffect(() => { localStorage.setItem("sf_currentUser", JSON.stringify(user)); }, [user]);
 
   useEffect(() => { injectCSS(dark); }, [dark]);
 
