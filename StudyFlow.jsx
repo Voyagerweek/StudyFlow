@@ -1,7 +1,7 @@
 const { useState, useEffect, useRef } = React;
 
 // 🔴 YOUR CREDENTIALS (FILL THESE IN!) 🔴
-const GEMINI_API_KEY = "AIzaSyAgzyZbmRywx7gzuE2ziWqNES-80gdcJ2w"; 
+const GEMINI_API_KEY = "AIzaSyDqUIhVvcjqHP64OAqJlIuMXY5uC2V8IEo"; 
 const ADMIN_EMAIL = "suryansh7suryansh@gmail.com"; // The email that gets Admin powers!
 
 // 🔴 YOUR FIREBASE CONNECTION 🔴
@@ -24,7 +24,7 @@ const auth = firebase.auth();
 
 // ── AI question generation (Powered by Gemini) ─────────────────────
 async function generateQuestions(material, count = 12) {
-  if (GEMINI_API_KEY === "PASTE_YOUR_GEMINI_API_KEY_HERE" || !GEMINI_API_KEY) {
+  if (GEMINI_API_KEY === "AIzaSyDqUIhVvcjqHP64OAqJlIuMXY5uC2V8IEo" || !GEMINI_API_KEY) {
     throw new Error("API Key Missing! Please add your key to the top of the code.");
   }
   
