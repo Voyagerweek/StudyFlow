@@ -24,21 +24,39 @@ const auth = firebase.auth();
 
 // ── AI question generation (Powered by Gemini) ─────────────────────
 async function generateQuestions(material, count = 12) {
-  if (GEMINI_API_KEY === "PASTE_YOUR_GEMINI_API_KEY_HERE") {
+  if (GEMINI_API_KEY === "PASTE_YOUR_GEMINI_API_KEY_HERE" || !GEMINI_API_KEY) {
     throw new Error("API Key Missing! Please add your key to the top of the code.");
   }
+  
   const promptText = `You are a teacher creating exam questions. Generate exactly ${count} questions from the material below.\nSTRICT RULES:\n1. Return ONLY raw JSON — no markdown formatting, no explanation, no backticks\n2. Mix types: mcq, truefalse, fillblank, shortanswer (roughly equal split)\n3. Mix difficulties: easy, medium, hard\n4. For fillblank: use a single blank ___ in the question; answer should be 1-3 words\n5. For mcq: provide exactly 4 options, answer is the index (0-3) of the correct one\n\nJSON FORMAT (follow exactly):\n{"questions":[\n{"type":"mcq","difficulty":"easy","question":"...?","options":["A","B","C","D"],"answer":0},\n{"type":"truefalse","difficulty":"medium","question":"...?","answer":true},\n{"type":"fillblank","difficulty":"medium","question":"The ___ is...","answer":"word"},\n{"type":"shortanswer","difficulty":"hard","question":"Explain...","answer":"detailed model answer here"}\n]}\n\nMATERIAL TO USE:\n${material}`;
 
- const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-    method: "POST", headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }], generationConfig: { response_mime_type: "application/json" } })
-  });
-  if (!res.ok) throw new Error("API Error: Check your key and internet connection.");
-  const data = await res.json();
-  const text = data.candidates[0].content.parts[0].text;
-  const cleanText = text.replace(/```json|```/g, "").trim();
-  const parsed = JSON.parse(cleanText);
-  return parsed.questions.map((q, i) => ({ ...q, id: Date.now() + i }));
+  try {
+    // Using the stable v1 endpoint and explicit latest model
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_API_KEY}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ 
+        contents: [{ parts: [{ text: promptText }] }], 
+        generationConfig: { response_mime_type: "application/json" } 
+      })
+    });
+
+    if (!res.ok) {
+      // This will catch the EXACT error Google is throwing and print it to your Console
+      const errData = await res.json();
+      console.error("🚨 GOOGLE API ERROR DETAILS:", errData);
+      throw new Error(`API Error: ${res.status} - ${errData.error?.message || "Unknown Error"}`);
+    }
+    
+    const data = await res.json();
+    const text = data.candidates[0].content.parts[0].text;
+    const cleanText = text.replace(/```json|```/g, "").trim();
+    const parsed = JSON.parse(cleanText);
+    return parsed.questions.map((q, i) => ({ ...q, id: Date.now() + i }));
+  } catch (error) {
+    console.error("🚨 FULL SCRIPT ERROR:", error);
+    throw error; 
+  }
 }
 
 // ── Global CSS injection ───────────────────────────────────────────
