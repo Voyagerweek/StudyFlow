@@ -29,7 +29,7 @@ async function generateQuestions(material, count = 12) {
   }
   const promptText = `You are a teacher creating exam questions. Generate exactly ${count} questions from the material below.\nSTRICT RULES:\n1. Return ONLY raw JSON — no markdown formatting, no explanation, no backticks\n2. Mix types: mcq, truefalse, fillblank, shortanswer (roughly equal split)\n3. Mix difficulties: easy, medium, hard\n4. For fillblank: use a single blank ___ in the question; answer should be 1-3 words\n5. For mcq: provide exactly 4 options, answer is the index (0-3) of the correct one\n\nJSON FORMAT (follow exactly):\n{"questions":[\n{"type":"mcq","difficulty":"easy","question":"...?","options":["A","B","C","D"],"answer":0},\n{"type":"truefalse","difficulty":"medium","question":"...?","answer":true},\n{"type":"fillblank","difficulty":"medium","question":"The ___ is...","answer":"word"},\n{"type":"shortanswer","difficulty":"hard","question":"Explain...","answer":"detailed model answer here"}\n]}\n\nMATERIAL TO USE:\n${material}`;
 
-  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+ const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }], generationConfig: { response_mime_type: "application/json" } })
   });
