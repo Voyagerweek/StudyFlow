@@ -14,9 +14,14 @@ const INIT_SUBJECTS = [];
 async function generateQuestions(material, count = 12) {
   const res = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": "YOUR_API_KEY_HERE", // 👈 Replace with your real key
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerously-allow-browser": "true" // 👈 Required for browser apps
+    },
     body: JSON.stringify({
-      model: "claude-sonnet-4-20250514",
+      model: "claude-3-5-sonnet-20240620", // 👈 Fixed the fake model name
       max_tokens: 2500,
       messages: [{
         role: "user",
