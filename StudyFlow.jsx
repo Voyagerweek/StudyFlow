@@ -1,55 +1,41 @@
 const { useState, useEffect, useRef } = React;
 
-// 🔴 PASTE YOUR API KEY HERE (Keep the quotation marks!) 🔴
-const GEMINI_API_KEY = AIzaSyAgzyZbmRywx7gzuE2ziWqNES-80gdcJ2w ; 
+// 🔴 YOUR CREDENTIALS (FILL THESE IN!) 🔴
+const GEMINI_API_KEY = "AIzaSyAgzyZbmRywx7gzuE2ziWqNES-80gdcJ2w"; 
+const ADMIN_EMAIL = "suryansh7suryansh@gmail.com"; // The email that gets Admin powers!
 
-// ── Demo seed data ─────────────────────────────────────────────────
-const INIT_USERS = [
-  { id: "admin", name: "Admin", role: "admin", password: "admin123" },
-  { id: "s1", name: "Priya Sharma", role: "student", password: "pass123", scores: [] }
-];
+// 🔴 YOUR FIREBASE CONNECTION 🔴
+const firebaseConfig = {
+  apiKey: "AIzaSyBzXUSJAUB0qHgV4-9SlFP2Xro4eZqdfiM",
+  authDomain: "studyflow-eee43.firebaseapp.com",
+  projectId: "studyflow-eee43",
+  storageBucket: "studyflow-eee43.firebasestorage.app",
+  messagingSenderId: "871015131293",
+  appId: "1:871015131293:web:c8b7c642345fddc5d60c74",
+  measurementId: "G-7TZWRX7JE4"
+};
+
+// Initialize Firebase (Checking if it exists first so it doesn't double-load)
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig);
+}
+const auth = firebase.auth();
+
 
 // ── AI question generation (Powered by Gemini) ─────────────────────
 async function generateQuestions(material, count = 12) {
   if (GEMINI_API_KEY === "PASTE_YOUR_GEMINI_API_KEY_HERE") {
     throw new Error("API Key Missing! Please add your key to the top of the code.");
   }
-
-  const promptText = `You are a teacher creating exam questions. Generate exactly ${count} questions from the material below.
-
-STRICT RULES:
-1. Return ONLY raw JSON — no markdown formatting, no explanation, no backticks
-2. Mix types: mcq, truefalse, fillblank, shortanswer (roughly equal split)
-3. Mix difficulties: easy, medium, hard
-4. For fillblank: use a single blank ___ in the question; answer should be 1-3 words
-5. For mcq: provide exactly 4 options, answer is the index (0-3) of the correct one
-
-JSON FORMAT (follow exactly):
-{"questions":[
-{"type":"mcq","difficulty":"easy","question":"...?","options":["A","B","C","D"],"answer":0},
-{"type":"truefalse","difficulty":"medium","question":"...?","answer":true},
-{"type":"fillblank","difficulty":"medium","question":"The ___ is...","answer":"word"},
-{"type":"shortanswer","difficulty":"hard","question":"Explain...","answer":"detailed model answer here"}
-]}
-
-MATERIAL TO USE:
-${material}`;
+  const promptText = `You are a teacher creating exam questions. Generate exactly ${count} questions from the material below.\nSTRICT RULES:\n1. Return ONLY raw JSON — no markdown formatting, no explanation, no backticks\n2. Mix types: mcq, truefalse, fillblank, shortanswer (roughly equal split)\n3. Mix difficulties: easy, medium, hard\n4. For fillblank: use a single blank ___ in the question; answer should be 1-3 words\n5. For mcq: provide exactly 4 options, answer is the index (0-3) of the correct one\n\nJSON FORMAT (follow exactly):\n{"questions":[\n{"type":"mcq","difficulty":"easy","question":"...?","options":["A","B","C","D"],"answer":0},\n{"type":"truefalse","difficulty":"medium","question":"...?","answer":true},\n{"type":"fillblank","difficulty":"medium","question":"The ___ is...","answer":"word"},\n{"type":"shortanswer","difficulty":"hard","question":"Explain...","answer":"detailed model answer here"}\n]}\n\nMATERIAL TO USE:\n${material}`;
 
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text: promptText }] }],
-      generationConfig: { response_mime_type: "application/json" } // Forces clean JSON output
-    })
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contents: [{ parts: [{ text: promptText }] }], generationConfig: { response_mime_type: "application/json" } })
   });
-
   if (!res.ok) throw new Error("API Error: Check your key and internet connection.");
-  
   const data = await res.json();
   const text = data.candidates[0].content.parts[0].text;
-  
-  // Clean up the response just in case
   const cleanText = text.replace(/```json|```/g, "").trim();
   const parsed = JSON.parse(cleanText);
   return parsed.questions.map((q, i) => ({ ...q, id: Date.now() + i }));
@@ -60,7 +46,6 @@ function injectCSS(dark) {
   let el = document.getElementById("sf-css");
   if (!el) { el = document.createElement("style"); el.id = "sf-css"; document.head.appendChild(el); }
   const acc = dark ? "#4FFFB0" : "#6366F1";
-  const acc2 = dark ? "#A78BFA" : "#2DD4BF";
   const bg = dark ? "#06090F" : "#EEF0FF";
   const txt = dark ? "#E8EAF6" : "#1E1F3B";
   const surf = dark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.62)";
@@ -181,46 +166,70 @@ function Navbar({ user, dark, onToggle, onLogout }) {
   );
 }
 
-// ── Login ──────────────────────────────────────────────────────────
-function Login({ users, onLogin, dark }) {
-  const [id, setId] = useState(""); const [pw, setPw] = useState("");
-  const [err, setErr] = useState(""); const [load, setLoad] = useState(false);
+// ── Login Component (NOW POWERED BY FIREBASE) ──────────────────────
+function Login({ dark }) {
+  const [email, setEmail] = useState("");
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState("");
+  const [load, setLoad] = useState(false);
 
-  const go = async () => {
+  const handleAuth = async (action) => {
     setLoad(true); setErr("");
-    await new Promise(r => setTimeout(r, 650));
-    const u = users.find(u => (u.id === id || u.name.toLowerCase() === id.toLowerCase()) && u.password === pw);
-    if (u) onLogin(u);
-    else { setErr("Invalid credentials — check the demo box below"); setLoad(false); }
+    try {
+      if (action === "login") {
+        await auth.signInWithEmailAndPassword(email, pw);
+      } else if (action === "signup") {
+        await auth.createUserWithEmailAndPassword(email, pw);
+      } else if (action === "google") {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        await auth.signInWithPopup(provider);
+      }
+    } catch (error) {
+      setErr(error.message.replace("Firebase: ", ""));
+    }
+    setLoad(false);
   };
 
   const acc = dark ? "#4FFFB0" : "#6366F1";
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", padding: 24, position: "relative", zIndex: 1 }}>
       <div className="sf-glass sf-up" style={{ width: "100%", maxWidth: 420, padding: "52px 44px" }}>
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
+        <div style={{ textAlign: "center", marginBottom: 30 }}>
           <div style={{ fontSize: 52, marginBottom: 18 }}>📚</div>
           <h1 className="sf-syne" style={{ fontSize: "2.1rem", fontWeight: 800, letterSpacing: "-.03em", marginBottom: 8 }}>StudyFlow</h1>
           <p style={{ opacity: .5, fontSize: ".9rem" }}>Your intelligent study companion</p>
         </div>
+        
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
-            <label className="sf-syne" style={{ display: "block", fontSize: ".75rem", fontWeight: 700, opacity: .5, letterSpacing: ".07em", textTransform: "uppercase", marginBottom: 7 }}>Username</label>
-            <input className="sf-inp" placeholder="Enter username..." value={id} onChange={e => setId(e.target.value)} onKeyDown={e => e.key === "Enter" && go()} />
+            <label className="sf-syne" style={{ display: "block", fontSize: ".75rem", fontWeight: 700, opacity: .5, letterSpacing: ".07em", textTransform: "uppercase", marginBottom: 7 }}>Email Address</label>
+            <input className="sf-inp" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} />
           </div>
           <div>
             <label className="sf-syne" style={{ display: "block", fontSize: ".75rem", fontWeight: 700, opacity: .5, letterSpacing: ".07em", textTransform: "uppercase", marginBottom: 7 }}>Password</label>
-            <input className="sf-inp" type="password" placeholder="••••••••" value={pw} onChange={e => setPw(e.target.value)} onKeyDown={e => e.key === "Enter" && go()} />
+            <input className="sf-inp" type="password" placeholder="Min 6 characters" value={pw} onChange={e => setPw(e.target.value)} />
           </div>
-          {err && <p style={{ color: "#FF5C7A", fontSize: ".86rem", textAlign: "center" }}>{err}</p>}
-          <button className="sf-btn sf-btn-p" onClick={go} disabled={load} style={{ marginTop: 8, justifyContent: "center", fontSize: ".95rem", padding: "14px 28px" }}>
-            {load ? <><div className="sf-spin" />Signing in…</> : "Sign In →"}
+          
+          {err && <p style={{ color: "#FF5C7A", fontSize: ".86rem", textAlign: "center", marginTop: 4 }}>{err}</p>}
+          
+          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <button className="sf-btn sf-btn-g" onClick={() => handleAuth("signup")} disabled={load || !email || !pw} style={{ flex: 1, justifyContent: "center", fontSize: ".9rem" }}>
+              Sign Up
+            </button>
+            <button className="sf-btn sf-btn-p" onClick={() => handleAuth("login")} disabled={load || !email || !pw} style={{ flex: 1, justifyContent: "center", fontSize: ".9rem" }}>
+              Log In →
+            </button>
+          </div>
+          
+          <div style={{ position: "relative", margin: "16px 0", textAlign: "center" }}>
+            <hr style={{ borderColor: dark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }} />
+            <span className="sf-syne" style={{ position: "absolute", top: -9, left: "50%", transform: "translateX(-50%)", background: dark ? "#06090F" : "#EEF0FF", padding: "0 10px", fontSize: ".75rem", fontWeight: 700, opacity: 0.5, letterSpacing: ".05em" }}>OR</span>
+          </div>
+
+          <button className="sf-btn sf-btn-g" onClick={() => handleAuth("google")} disabled={load} style={{ width: "100%", justifyContent: "center", padding: "14px 28px" }}>
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google" style={{ width: 18, marginRight: 8 }} />
+            Sign in with Google
           </button>
-        </div>
-        <div style={{ marginTop: 28, padding: "14px 16px", borderRadius: 13, background: dark ? "rgba(79,255,176,0.06)" : "rgba(99,102,241,0.06)", border: `1px solid ${dark ? "rgba(79,255,176,0.15)" : "rgba(99,102,241,0.15)"}` }}>
-          <p className="sf-syne" style={{ fontSize: ".75rem", opacity: .6, marginBottom: 7, letterSpacing: ".04em" }}>DEMO CREDENTIALS</p>
-          <p style={{ fontSize: ".82rem", opacity: .65, marginBottom: 3 }}>Admin: <strong>admin</strong> / <strong>admin123</strong></p>
-          <p style={{ fontSize: ".82rem", opacity: .65 }}>Student: <strong>s1</strong> / <strong>pass123</strong></p>
         </div>
       </div>
     </div>
@@ -228,7 +237,7 @@ function Login({ users, onLogin, dark }) {
 }
 
 // ── Admin Dashboard ────────────────────────────────────────────────
-function Admin({ subjects, setSubjects, users, setUsers, dark, onQuiz }) {
+function Admin({ subjects, setSubjects, dark, onQuiz }) {
   const [tab, setTab] = useState("subjects");
   const [selSub, setSelSub] = useState(null);
   const [selUnit, setSelUnit] = useState(null);
@@ -240,8 +249,6 @@ function Admin({ subjects, setSubjects, users, setUsers, dark, onQuiz }) {
   const [gen, setGen] = useState(false);
   const [genCount, setGenCount] = useState(12);
   const [genMsg, setGenMsg] = useState("");
-  const [newSName, setNewSName] = useState("");
-  const [newSPass, setNewSPass] = useState("");
 
   const acc = dark ? "#4FFFB0" : "#6366F1";
 
@@ -332,14 +339,6 @@ function Admin({ subjects, setSubjects, users, setUsers, dark, onQuiz }) {
     setSubjects(p => p.map(s => s.id === selSub.id ? { ...s, units: s.units.map(u => u.id === selUnit.id ? { ...u, topics: u.topics.map(t => t.id === selTopic.id ? { ...t, questions: [] } : t) } : u) } : s));
   };
 
-  const addStudent = () => {
-    if (!newSName.trim() || !newSPass.trim()) return;
-    setUsers(p => [...p, { id: `s${Date.now()}`, name: newSName, role: "student", password: newSPass, scores: [] }]);
-    setNewSName(""); setNewSPass("");
-  };
-
-  const delStudent = (id) => setUsers(p => p.filter(u => u.id !== id));
-
   const msgColor = genMsg.startsWith("✓") ? "#4FFFB0" : genMsg.startsWith("✗") ? "#FF5C7A" : "#FBB924";
   const msgBg = genMsg.startsWith("✓") ? "rgba(79,255,176,0.1)" : genMsg.startsWith("✗") ? "rgba(255,92,122,0.1)" : "rgba(251,185,36,0.1)";
 
@@ -347,13 +346,12 @@ function Admin({ subjects, setSubjects, users, setUsers, dark, onQuiz }) {
     <div style={{ paddingTop: 64, minHeight: "100vh", position: "relative", zIndex: 1 }}>
       {/* Tab bar */}
       <div style={{ borderBottom: `1px solid ${dark ? "rgba(255,255,255,0.07)" : "rgba(99,102,241,0.12)"}`, padding: "0 28px", display: "flex", gap: 2, background: dark ? "rgba(6,9,15,0.6)" : "rgba(238,240,255,0.6)", backdropFilter: "blur(10px)" }}>
-        {[["subjects","📚 Subjects"],["upload","⚡ Upload & Generate"],["students","👥 Students"]].map(([k,v]) => (
+        {[["subjects","📚 Subjects"],["upload","⚡ Upload & Generate"]].map(([k,v]) => (
           <button key={k} className={`sf-tab ${tab===k?"sf-active":""}`} onClick={() => setTab(k)} style={{ padding: "14px 22px" }}>{v}</button>
         ))}
       </div>
 
       <div style={{ padding: "32px 32px 48px", maxWidth: 1100, margin: "0 auto" }}>
-
         {/* SUBJECTS */}
         {tab === "subjects" && (
           <div className="sf-in">
@@ -553,48 +551,6 @@ function Admin({ subjects, setSubjects, users, setUsers, dark, onQuiz }) {
                   )}
                 </div>
               )}
-            </div>
-          </div>
-        )}
-
-        {/* STUDENTS */}
-        {tab === "students" && (
-          <div className="sf-in">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 26 }}>
-              <div>
-                <h2 className="sf-syne" style={{ fontSize: "1.6rem", fontWeight: 800 }}>Students</h2>
-                <p style={{ opacity: .5, fontSize: ".9rem", marginTop: 4 }}>{users.filter(u => u.role === "student").length} enrolled</p>
-              </div>
-            </div>
-
-            <div className="sf-glass" style={{ padding: "18px 22px", marginBottom: 18 }}>
-              <p className="sf-syne" style={{ fontSize: ".72rem", fontWeight: 700, opacity: .45, letterSpacing: ".09em", textTransform: "uppercase", marginBottom: 12 }}>Add New Student</p>
-              <div style={{ display: "flex", gap: 12 }}>
-                <input className="sf-inp" placeholder="Full name…" value={newSName} onChange={e => setNewSName(e.target.value)} />
-                <input className="sf-inp" placeholder="Password…" value={newSPass} onChange={e => setNewSPass(e.target.value)} />
-                <button className="sf-btn sf-btn-p" onClick={addStudent} style={{ whiteSpace: "nowrap" }}>Add Student</button>
-              </div>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              {users.filter(u => u.role === "student").map(st => {
-                const sc = st.scores || [];
-                const avg = sc.length ? Math.round(sc.reduce((a,s) => a + s.pct, 0) / sc.length) : null;
-                return (
-                  <div key={st.id} className="sf-glass" style={{ padding: "15px 20px", display: "flex", alignItems: "center", gap: 16 }}>
-                    <div style={{ width: 42, height: 42, borderRadius: 12, background: dark ? "rgba(79,255,176,0.1)" : "rgba(99,102,241,0.1)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: "1.1rem" }}>{st.name[0]}</div>
-                    <div style={{ flex: 1 }}>
-                      <p style={{ fontWeight: 600 }}>{st.name}</p>
-                      <p style={{ fontSize: ".8rem", opacity: .45 }}>ID: {st.id} · Pass: {st.password}</p>
-                    </div>
-                    <div style={{ textAlign: "right", marginRight: 8 }}>
-                      <p className="sf-syne" style={{ fontWeight: 800, color: acc, fontSize: "1.1rem" }}>{avg !== null ? `${avg}%` : "—"}</p>
-                      <p style={{ fontSize: ".75rem", opacity: .45 }}>{sc.length} quizzes</p>
-                    </div>
-                    <button className="sf-btn sf-btn-d" onClick={() => delStudent(st.id)} style={{ padding: "8px 16px" }}>Remove</button>
-                  </div>
-                );
-              })}
             </div>
           </div>
         )}
@@ -953,38 +909,60 @@ function Results({ correct, total, pct, questions, answers, topic, subject, dark
   );
 }
 
-// ── Root App (Now with Local Storage saving!) ──────────────────────
+// ── Root App ───────────────────────────────────────────────────────
 function App() {
-  // Load data from Local Storage (or use defaults if empty)
   const [dark, setDark] = useState(() => JSON.parse(localStorage.getItem("sf_dark")) ?? true);
-  const [users, setUsers] = useState(() => JSON.parse(localStorage.getItem("sf_users")) || INIT_USERS);
   const [subjects, setSubjects] = useState(() => JSON.parse(localStorage.getItem("sf_subjects")) || []);
-  const [user, setUser] = useState(() => JSON.parse(localStorage.getItem("sf_currentUser")) || null);
+  const [user, setUser] = useState(null);
+  const [authInit, setAuthInit] = useState(false);
   const [quiz, setQuiz] = useState(null);
 
   // Save data to Local Storage whenever it changes
   useEffect(() => { localStorage.setItem("sf_dark", JSON.stringify(dark)); }, [dark]);
-  useEffect(() => { localStorage.setItem("sf_users", JSON.stringify(users)); }, [users]);
   useEffect(() => { localStorage.setItem("sf_subjects", JSON.stringify(subjects)); }, [subjects]);
-  useEffect(() => { localStorage.setItem("sf_currentUser", JSON.stringify(user)); }, [user]);
+
+  // Listen for Firebase Login Status
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(firebaseUser => {
+      if (firebaseUser) {
+        // Automatically make them Admin if it matches your email!
+        const isAdmin = firebaseUser.email?.toLowerCase() === ADMIN_EMAIL.toLowerCase();
+        
+        setUser({
+          id: firebaseUser.uid,
+          name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+          email: firebaseUser.email,
+          role: isAdmin ? "admin" : "student",
+          scores: JSON.parse(localStorage.getItem(`sf_scores_${firebaseUser.uid}`)) || []
+        });
+      } else {
+        setUser(null);
+      }
+      setAuthInit(true);
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => { injectCSS(dark); }, [dark]);
 
-  const login = (u) => setUser(u);
-  const logout = () => { setUser(null); setQuiz(null); };
+  const logout = () => { auth.signOut(); setQuiz(null); };
 
   const finishQuiz = (result) => {
-    setUsers(p => p.map(u => u.id === user.id ? { ...u, scores: [...(u.scores||[]), result] } : u));
-    setUser(p => ({ ...p, scores: [...(p.scores||[]), result] }));
+    const newScores = [...(user.scores||[]), result];
+    localStorage.setItem(`sf_scores_${user.id}`, JSON.stringify(newScores));
+    setUser(p => ({ ...p, scores: newScores }));
     setQuiz(null);
   };
+
+  if (!authInit) return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", color: dark ? "#fff" : "#000", fontFamily: "'Syne', sans-serif", fontSize: "1.2rem" }}><div className="sf-spin" style={{ marginRight: 10 }}></div> Loading StudyFlow...</div>;
 
   return (
     <div style={{ minHeight: "100vh" }}>
       <Blobs dark={dark} />
       <Navbar user={user} dark={dark} onToggle={() => setDark(d => !d)} onLogout={logout} />
-      {!user && <Login users={users} onLogin={login} dark={dark} />}
-      {user && !quiz && user.role === "admin" && <Admin subjects={subjects} setSubjects={setSubjects} users={users} setUsers={setUsers} dark={dark} onQuiz={setQuiz} />}
+      
+      {!user && <Login dark={dark} />}
+      {user && !quiz && user.role === "admin" && <Admin subjects={subjects} setSubjects={setSubjects} dark={dark} onQuiz={setQuiz} />}
       {user && !quiz && user.role === "student" && <Student subjects={subjects} user={user} dark={dark} onQuiz={setQuiz} />}
       {user && quiz && <Quiz quiz={quiz} dark={dark} onFinish={finishQuiz} />}
     </div>
