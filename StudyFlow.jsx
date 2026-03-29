@@ -7,41 +7,7 @@ const INIT_USERS = [
   { id: "s2", name: "Rahul Verma", role: "student", password: "pass456", scores: [] },
 ];
 
-const INIT_SUBJECTS = [
-  {
-    id: 1, name: "Biology", icon: "🧬",
-    units: [{
-      id: 1, name: "Unit 1: Cell Biology",
-      topics: [{
-        id: 1, name: "Cell Structure & Organelles",
-        material: "The cell is the basic unit of life. It contains organelles like the nucleus (which holds DNA and controls cell activities), mitochondria (powerhouse of the cell that produces ATP through cellular respiration), ribosomes (protein synthesis sites found on rough ER or floating free), endoplasmic reticulum (smooth ER processes lipids; rough ER has ribosomes), Golgi apparatus (packages and ships proteins), lysosomes (contain digestive enzymes for waste disposal), and cell membrane (semi-permeable, controls what enters and exits). Plant cells also have cell walls (rigid, made of cellulose), chloroplasts (for photosynthesis), and large central vacuoles.",
-        questions: [
-          { id: 1, type: "mcq", difficulty: "easy", question: "What is called the 'powerhouse of the cell'?", options: ["Nucleus", "Mitochondria", "Ribosome", "Golgi Apparatus"], answer: 1 },
-          { id: 2, type: "truefalse", difficulty: "easy", question: "Ribosomes are responsible for protein synthesis.", answer: true },
-          { id: 3, type: "fillblank", difficulty: "medium", question: "The ___ holds the DNA of a cell and controls its activities.", answer: "nucleus" },
-          { id: 4, type: "shortanswer", difficulty: "hard", question: "What is the role of the Golgi apparatus?", answer: "The Golgi apparatus packages and transports proteins and lipids within and out of the cell. It modifies, sorts and ships proteins received from the rough ER." },
-          { id: 5, type: "truefalse", difficulty: "medium", question: "Plant cells have a cell wall made of cellulose.", answer: true },
-          { id: 6, type: "mcq", difficulty: "medium", question: "Which organelle performs photosynthesis in plant cells?", options: ["Mitochondria", "Ribosome", "Chloroplast", "Nucleus"], answer: 2 },
-        ]
-      }]
-    }]
-  },
-  {
-    id: 2, name: "History", icon: "📜",
-    units: [{
-      id: 1, name: "Unit 1: Ancient Civilizations",
-      topics: [{
-        id: 1, name: "Indus Valley Civilization",
-        material: "The Indus Valley Civilization (c. 3300–1300 BCE), also called Harappan civilization, was one of the world's earliest urban civilizations. Major cities: Mohenjo-daro and Harappa. Known for advanced urban planning — grid-pattern streets, covered drainage systems, standardized brick sizes. Economy based on agriculture and trade with Mesopotamia. Script remains undeciphered. Major decline around 1900 BCE, possibly due to climate change and shifts in the Ghaggar-Hakra river.",
-        questions: [
-          { id: 1, type: "mcq", difficulty: "easy", question: "What were the two main cities of the Indus Valley Civilization?", options: ["Delhi and Mumbai", "Mohenjo-daro and Harappa", "Pataliputra and Taxila", "Varanasi and Ayodhya"], answer: 1 },
-          { id: 2, type: "truefalse", difficulty: "medium", question: "The Indus Valley script has been fully deciphered by modern scholars.", answer: false },
-          { id: 3, type: "fillblank", difficulty: "medium", question: "The Indus Valley Civilization is also known as the ___ civilization.", answer: "Harappan" },
-        ]
-      }]
-    }]
-  }
-];
+const INIT_SUBJECTS = [];
 
 // ── AI question generation ─────────────────────────────────────────
 async function generateQuestions(material, count = 12) {
