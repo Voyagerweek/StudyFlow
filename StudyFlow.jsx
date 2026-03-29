@@ -7,6 +7,7 @@ const INIT_USERS = [
   { id: "s2", name: "Rahul Verma", role: "student", password: "pass456", scores: [] },
 ];
 
+// Start with a blank slate
 const INIT_SUBJECTS = [];
 
 // ── AI question generation ─────────────────────────────────────────
@@ -115,6 +116,8 @@ function injectCSS(dark) {
     .sf-fill{height:100%;background:${acc};border-radius:2px;transition:width .4s ease}
     input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:${brd};outline:none}
     input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:${acc};cursor:pointer}
+    .sf-act-btn{background:none; border:none; color:inherit; opacity:0.3; cursor:pointer; font-size:12px; padding:2px; transition:opacity 0.2s;}
+    .sf-act-btn:hover{opacity:1;}
   `;
 }
 
@@ -242,11 +245,24 @@ function Admin({ subjects, setSubjects, users, setUsers, dark, onQuiz }) {
 
   useEffect(() => { if (selTopic) setMatText(selTopic.material || ""); }, [selTopic?.id]);
 
+  // CRUD Functions
   const addSubject = () => {
     if (!newName.trim()) return;
     const palette = ["#4FFFB0","#FBB924","#FB923C","#A78BFA","#2DD4BF","#F87171"];
     setSubjects(p => [...p, { id: Date.now(), name: newName, icon: newIcon, color: palette[p.length % palette.length], units: [] }]);
     setNewName(""); setNewIcon("📖"); setAddMode(null);
+  };
+
+  const editSubject = (sub) => {
+    const n = prompt("Edit Subject Name:", sub.name);
+    if(n) setSubjects(p => p.map(s => s.id === sub.id ? { ...s, name: n } : s));
+  };
+
+  const deleteSubject = (id) => {
+    if(confirm("Are you sure you want to delete this subject and all its units?")) {
+      setSubjects(p => p.filter(s => s.id !== id));
+      if(selSub?.id === id) { setSelSub(null); setSelUnit(null); setSelTopic(null); }
+    }
   };
 
   const addUnit = () => {
@@ -255,10 +271,34 @@ function Admin({ subjects, setSubjects, users, setUsers, dark, onQuiz }) {
     setNewName(""); setAddMode(null);
   };
 
+  const editUnit = (subId, unit) => {
+    const n = prompt("Edit Unit Name:", unit.name);
+    if(n) setSubjects(p => p.map(s => s.id === subId ? { ...s, units: s.units.map(u => u.id === unit.id ? { ...u, name: n } : u) } : s));
+  };
+
+  const deleteUnit = (subId, unitId) => {
+    if(confirm("Are you sure you want to delete this unit?")) {
+      setSubjects(p => p.map(s => s.id === subId ? { ...s, units: s.units.filter(u => u.id !== unitId) } : s));
+      if(selUnit?.id === unitId) { setSelUnit(null); setSelTopic(null); }
+    }
+  };
+
   const addTopic = (sub, unit) => {
     if (!newName.trim()) return;
     setSubjects(p => p.map(s => s.id === sub.id ? { ...s, units: s.units.map(u => u.id === unit.id ? { ...u, topics: [...u.topics, { id: Date.now(), name: newName, material: "", questions: [] }] } : u) } : s));
     setNewName(""); setAddMode(null);
+  };
+
+  const editTopic = (subId, unitId, topic) => {
+    const n = prompt("Edit Topic Name:", topic.name);
+    if(n) setSubjects(p => p.map(s => s.id === subId ? { ...s, units: s.units.map(u => u.id === unitId ? { ...u, topics: u.topics.map(t => t.id === topic.id ? { ...t, name: n } : t) } : u) } : s));
+  };
+
+  const deleteTopic = (subId, unitId, topicId) => {
+    if(confirm("Are you sure you want to delete this topic?")) {
+      setSubjects(p => p.map(s => s.id === subId ? { ...s, units: s.units.map(u => u.id === unitId ? { ...u, topics: u.topics.filter(t => t.id !== topicId) } : u) } : s));
+      if(selTopic?.id === topicId) setSelTopic(null);
+    }
   };
 
   const saveMat = () => {
@@ -328,30 +368,46 @@ function Admin({ subjects, setSubjects, users, setUsers, dark, onQuiz }) {
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(300px,1fr))", gap: 16 }}>
               {subjects.map(sub => (
                 <div key={sub.id} className="sf-glass" style={{ padding: 22 }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
-                    <span style={{ fontSize: 30 }}>{sub.icon}</span>
-                    <div>
-                      <h3 className="sf-syne" style={{ fontWeight: 700 }}>{sub.name}</h3>
-                      <p style={{ fontSize: ".8rem", opacity: .5 }}>{sub.units.length} units · {sub.units.reduce((a,u)=>a+u.topics.length,0)} topics</p>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 18 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <span style={{ fontSize: 30 }}>{sub.icon}</span>
+                      <div>
+                        <h3 className="sf-syne" style={{ fontWeight: 700 }}>{sub.name}</h3>
+                        <p style={{ fontSize: ".8rem", opacity: .5 }}>{sub.units.length} units · {sub.units.reduce((a,u)=>a+u.topics.length,0)} topics</p>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 4 }}>
+                      <button className="sf-act-btn" onClick={() => editSubject(sub)}>✏️</button>
+                      <button className="sf-act-btn" onClick={() => deleteSubject(sub.id)}>🗑️</button>
                     </div>
                   </div>
 
                   {sub.units.map(unit => (
                     <div key={unit.id} style={{ marginBottom: 10 }}>
-                      <div style={{ padding: "9px 12px", borderRadius: 10, background: dark ? "rgba(255,255,255,0.04)" : "rgba(99,102,241,0.06)", marginBottom: 5 }}>
+                      <div style={{ padding: "9px 12px", borderRadius: 10, background: dark ? "rgba(255,255,255,0.04)" : "rgba(99,102,241,0.06)", marginBottom: 5, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <p style={{ fontWeight: 600, fontSize: ".875rem" }}>{unit.name}</p>
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button className="sf-act-btn" onClick={() => editUnit(sub.id, unit)}>✏️</button>
+                          <button className="sf-act-btn" onClick={() => deleteUnit(sub.id, unit.id)}>🗑️</button>
+                        </div>
                       </div>
+                      
                       {unit.topics.map(topic => (
-                        <div key={topic.id}
-                          onClick={() => { setSelSub(sub); setSelUnit(unit); setSelTopic(topic); setTab("upload"); }}
-                          style={{ padding: "7px 12px 7px 22px", fontSize: ".84rem", cursor: "pointer", borderRadius: 8, display: "flex", justifyContent: "space-between", alignItems: "center", opacity: .75, transition: "opacity .15s" }}
-                          onMouseOver={e => e.currentTarget.style.opacity = "1"}
-                          onMouseOut={e => e.currentTarget.style.opacity = ".75"}
+                        <div key={topic.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "7px 12px 7px 22px", borderRadius: 8, transition: "background .15s" }}
+                          onMouseOver={e => e.currentTarget.style.background = dark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.03)"}
+                          onMouseOut={e => e.currentTarget.style.background = "transparent"}
                         >
-                          <span>→ {topic.name}</span>
-                          <span className="sf-badge sf-mcq" style={{ fontSize: ".62rem" }}>{topic.questions.length}Q</span>
+                          <div onClick={() => { setSelSub(sub); setSelUnit(unit); setSelTopic(topic); setTab("upload"); }} style={{ cursor: "pointer", flex: 1, fontSize: ".84rem", opacity: .75 }}>
+                            <span>→ {topic.name}</span>
+                          </div>
+                          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span className="sf-badge sf-mcq" style={{ fontSize: ".62rem" }}>{topic.questions.length}Q</span>
+                            <button className="sf-act-btn" onClick={() => editTopic(sub.id, unit.id, topic)}>✏️</button>
+                            <button className="sf-act-btn" onClick={() => deleteTopic(sub.id, unit.id, topic.id)}>🗑️</button>
+                          </div>
                         </div>
                       ))}
+
                       {addMode === `tp-${unit.id}` ? (
                         <div style={{ display: "flex", gap: 8, marginTop: 6, paddingLeft: 12 }}>
                           <input className="sf-inp" placeholder="Topic name…" value={newName} onChange={e => setNewName(e.target.value)} style={{ fontSize: ".85rem", padding: "8px 12px" }} autoFocus onKeyDown={e => e.key === "Enter" && addTopic(sub, unit)} />
