@@ -1,0 +1,11 @@
+[build]
+  publish = "."          # root of the project — adjust if you have a build step
+
+[[edge_functions]]
+  path = "/"
+  function = "inject-env"
+
+# Optional: also intercept any direct /index.html requests
+[[edge_functions]]
+  path = "/index.html"
+  function = "inject-env"
