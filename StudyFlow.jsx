@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+const { useState, useEffect, useRef } = React;
 
 // ── Demo seed data ─────────────────────────────────────────────────
 const INIT_USERS = [
@@ -923,7 +923,7 @@ function Results({ correct, total, pct, questions, answers, topic, subject, dark
 }
 
 // ── Root App ───────────────────────────────────────────────────────
-export default function App() {
+function App() {
   const [dark, setDark] = useState(true);
   const [user, setUser] = useState(null);
   const [users, setUsers] = useState(INIT_USERS);
@@ -952,3 +952,6 @@ export default function App() {
     </div>
   );
 }
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
