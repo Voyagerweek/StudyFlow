@@ -6,7 +6,7 @@ const ADMIN_EMAIL = "suryansh7suryansh@gmail.com"; // The email that gets Admin 
 
 // 🔴 YOUR FIREBASE CONNECTION 🔴
 const firebaseConfig = {
-  apiKey: "AIzaSyBzXUSJAUB0qHgV4-9SlFP2Xro4eZqdfiM",
+  apiKey: "AIzaSyBzXUSJAUBoQHgV4-9SIfP2Xro4eZQdFiM",
   authDomain: "studyflow-eee43.firebaseapp.com",
   projectId: "studyflow-eee43",
   storageBucket: "studyflow-eee43.firebasestorage.app",
