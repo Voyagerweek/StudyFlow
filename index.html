@@ -1,24 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StudyFlow</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>StudyFlow</title>
 
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+  <!-- React + Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Firebase (compat build so the JSX can use firebase.auth() etc.) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
+
+  <!--
+    ┌─────────────────────────────────────────────────────────────────────┐
+    │  ENVIRONMENT VARIABLES — HOW TO SET THESE UP                        │
+    │                                                                     │
+    │  Option A · Netlify                                                 │
+    │    1. Site settings → Environment variables → Add each key below.  │
+    │    2. In netlify.toml add a [build] section and reference them via  │
+    │       NETLIFY_* prefix if you use a build command, OR use the       │
+    │       _headers / edge functions approach to inject this script.     │
+    │                                                                     │
+    │  Option B · Vercel                                                  │
+    │    1. Project Settings → Environment Variables → add each key.     │
+    │    2. Add a vercel.json "rewrites" or use a serverless function     │
+    │       (api/env.js) to serve this block dynamically.                │
+    │                                                                     │
+    │  Option C · Quick local dev (NEVER commit this file with real keys) │
+    │    Just fill in the values below directly for local testing only.   │
+    │                                                                     │
+    │  ALL KEYS LISTED:                                                   │
+    │    GEMINI_API_KEY          — Gemini 1.5 Flash API key               │
+    │    ADMIN_EMAIL             — email that gets admin role (fallback)  │
+    │    FIREBASE_API_KEY                                                 │
+    │    FIREBASE_AUTH_DOMAIN                                             │
+    │    FIREBASE_PROJECT_ID                                              │
+    │    FIREBASE_STORAGE_BUCKET                                          │
+    │    FIREBASE_MESSAGING_SENDER_ID                                     │
+    │    FIREBASE_APP_ID                                                  │
+    └─────────────────────────────────────────────────────────────────────┘
+
+    Replace each %%PLACEHOLDER%% with your actual env var injection syntax.
+    e.g. for Netlify edge functions: Deno.env.get("GEMINI_API_KEY")
+         for a simple build script:  sed replacement of %%VAR%%
+  -->
+  <script>
+    window.__env = {
+      GEMINI_API_KEY:               "%%GEMINI_API_KEY%%",
+      ADMIN_EMAIL:                  "%%ADMIN_EMAIL%%",
+      FIREBASE_API_KEY:             "%%FIREBASE_API_KEY%%",
+      FIREBASE_AUTH_DOMAIN:         "%%FIREBASE_AUTH_DOMAIN%%",
+      FIREBASE_PROJECT_ID:          "%%FIREBASE_PROJECT_ID%%",
+      FIREBASE_STORAGE_BUCKET:      "%%FIREBASE_STORAGE_BUCKET%%",
+      FIREBASE_MESSAGING_SENDER_ID: "%%FIREBASE_MESSAGING_SENDER_ID%%",
+      FIREBASE_APP_ID:              "%%FIREBASE_APP_ID%%",
+    };
+  </script>
 </head>
 <body>
-    <div id="root"></div>
-    <script type="text/babel">
-        window.React = React;
-        window.ReactDOM = ReactDOM;
-    </script>
-    <script type="text/babel" src="StudyFlow.jsx"></script>
+  <div id="root"></div>
+  <script type="text/babel">
+    window.React    = React;
+    window.ReactDOM = ReactDOM;
+  </script>
+  <script type="text/babel" src="StudyFlow.jsx"></script>
 </body>
 </html>
